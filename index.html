@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>analogies prototype</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="title">analogies subtest</div>
+        <div class="subtitle" id="bankInfo">loading…</div>
+      </div>
+
+      <div class="controls">
+        <button id="langBtn" class="btn btn-ghost" type="button" title="toggle language">lang: tr</button>
+        <button id="devBtn" class="btn btn-ghost" type="button" title="toggle dev info">dev: off</button>
+        <button id="restartBtn" class="btn btn-ghost" type="button" title="restart">restart</button>
+      </div>
+    </header>
+
+    <main class="card">
+      <section id="startScreen">
+        <h1>prototype run</h1>
+        <p class="muted">
+          this will assemble 40 items (32 fixed + 8 rotation). rotation items are administered but not scored.
+        </p>
+
+        <div class="pillrow">
+          <span class="pill" id="countsPill">fixed: ? • rotation pool: ?</span>
+          <span class="pill">scored: fixed only</span>
+        </div>
+
+        <button id="startBtn" class="btn btn-primary" type="button">start</button>
+        <div class="tiny muted">tip: use ← / → for back/next once you start.</div>
+      </section>
+
+      <section id="testScreen" class="hidden">
+        <div class="progress">
+          <div class="bar"><div id="barFill" class="fill"></div></div>
+          <div class="meta">
+            <span id="progressText">item 1 / 40</span>
+            <span id="typeTag" class="tag">fixed</span>
+          </div>
+        </div>
+
+        <div class="stem" id="stem"></div>
+
+        <div class="choices" id="choices"></div>
+
+        <div id="devInfo" class="dev hidden"></div>
+
+        <div class="nav">
+          <button id="backBtn" class="btn" type="button">back</button>
+          <button id="nextBtn" class="btn btn-primary" type="button" disabled>next</button>
+        </div>
+      </section>
+
+      <section id="endScreen" class="hidden">
+        <h1>done</h1>
+        <div class="scorebox">
+          <div class="scoreline">
+            <span class="label">raw (fixed only)</span>
+            <span class="value" id="rawScore">-</span>
+          </div>
+          <div class="scoreline">
+            <span class="label">fixed correct</span>
+            <span class="value" id="fixedCorrect">-</span>
+          </div>
+          <div class="scoreline">
+            <span class="label">fixed total</span>
+            <span class="value" id="fixedTotal">-</span>
+          </div>
+          <div class="scoreline">
+            <span class="label">rotation answered</span>
+            <span class="value" id="rotAnswered">-</span>
+          </div>
+        </div>
+
+        <div class="endBtns">
+          <button id="downloadBtn" class="btn btn-primary" type="button">download attempt json</button>
+          <button id="reviewBtn" class="btn" type="button">review answers</button>
+        </div>
+
+        <pre id="reviewBox" class="review hidden"></pre>
+      </section>
+    </main>
+
+    <footer class="footer muted">
+      local prototype. do not ship answer keys to clients in production unless you enjoy people cheating.
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
