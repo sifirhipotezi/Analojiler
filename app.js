@@ -102,8 +102,9 @@ function renderChoices(item) {
   const locRec = getLocalizationRecord(item);
 
   keys.forEach((k) => {
+    const isCorrect = item.ANSWER_KEY === k;
     const div = document.createElement("div");
-    div.className = "choice" + (selected === k ? " selected" : "");
+    div.className = "choice" + (selected === k ? " selected" : "") + (isCorrect ? " correct" : "");
     div.dataset.key = k;
 
     const selectArea = document.createElement("div");
@@ -122,6 +123,14 @@ function renderChoices(item) {
     const txt = document.createElement("div");
     txt.className = "txt";
     txt.textContent = choiceText(item, k);
+
+    if (isCorrect) {
+      const correctTag = document.createElement("span");
+      correctTag.className = "correct-tag";
+      correctTag.textContent = "correct";
+      txt.appendChild(document.createTextNode(" "));
+      txt.appendChild(correctTag);
+    }
 
     const input = document.createElement("input");
     input.className = "loc-input";
