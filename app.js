@@ -403,6 +403,7 @@ function start() {
   startedAt = new Date().toISOString();
   idx = 0;
   responses.clear();
+  localizationEdits.clear();
 
   form = buildForm(bankItems);
 
@@ -416,6 +417,7 @@ function start() {
 function restart() {
   idx = 0;
   responses.clear();
+  localizationEdits.clear();
   form = [];
 
   el("testScreen").classList.add("hidden");
@@ -443,8 +445,18 @@ function toggleDev() {
 function setupKeys() {
   document.addEventListener("keydown", (e) => {
     if (el("testScreen").classList.contains("hidden")) return;
+    // don't steal keys when typing in localization inputs or notes
+    const active = document.activeElement;
+    const inInput = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA");
+    if (inInput) return;
+
     if (e.key === "ArrowRight") next();
     if (e.key === "ArrowLeft") back();
+    if (e.key === " ") {
+      e.preventDefault();
+      next();
+      return;
+    }
 
     const k = e.key.toUpperCase();
     if (["A","B","C","D","E"].includes(k)) onSelect(form[idx], k);
