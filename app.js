@@ -1,7 +1,9 @@
 /* minimal analogy prototype
-   loads analogies_items_private.json (meta + items)
-   assembles 40 items: 32 fixed + 8 random rotation
-   scores fixed only
+   - loads ./data/analogies_items_private.json (meta + items)
+   - assembles 40 items: 32 fixed + 8 random rotation
+   - fully randomizes order
+   - auto-advances on selection
+   - scores fixed only
 */
 
 const JSON_PATH = "./data/analogies_items_private.json";
@@ -10,44 +12,63 @@ let bankMeta = null;
 let bankItems = [];
 let form = [];
 
-let lang = "TR";          // TR or EN
+let lang = "TR";     // TR or EN
 let devMode = false;
 
 let idx = 0;
 let attemptId = null;
 let startedAt = null;
 
-let itemEnterT = 0;       // perf timestamp for response time
+let itemEnterT = 0;
 const responses = new Map(); // ITEM_ID -> { chosen, rt_ms, ts }
 
 const el = (id) => document.getElementById(id);
 
 function uid() {
-  // good enough for local prototyping
   return "att_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
 }
 
-function shuffle(arr) {
+// deterministic seeded rng for reproducible shuffles per attempt id
+function hashToSeed(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function mulberry32(a) {
+  return function() {
+    let t = (a += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffleWithRng(arr, rng) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
 }
 
-function buildForm(items) {
+function buildForm(items, seedStr) {
+  const rng = mulberry32(hashToSeed(seedStr));
+
   const fixed = items.filter(x => x.ITEM_TYPE === "FIXED");
   const rotation = items.filter(x => x.ITEM_TYPE === "ROTATION");
 
-  const rot8 = shuffle(rotation).slice(0, 8);
+  const fixedShuf = shuffleWithRng(fixed, rng);
+  const rot8 = shuffleWithRng(rotation, rng).slice(0, 8);
 
-  // interleave rotation into fixed at random positions (less obvious)
-  const out = fixed.slice();
-  const slots = shuffle([...Array(out.length).keys()]).slice(0, 8).sort((a,b)=>a-b);
-  slots.forEach((pos, i) => out.splice(pos + i, 0, rot8[i]));
+  const combined = fixedShuf.concat(rot8);
 
-  return out;
+  // fully randomize final 40
+  return shuffleWithRng(combined, rng);
 }
 
 function choiceText(item, key) {
@@ -58,6 +79,13 @@ function choiceText(item, key) {
 function stemText(item) {
   const k = `STEM_${lang}`;
   return item[k] ?? "";
+}
+
+function formatStemForDisplay(item) {
+  // normalize spacing around ":" just in case your data isn’t consistent
+  const raw = stemText(item) || "";
+  const normalized = raw.replace(/\s*:\s*/g, " : ").trim();
+  return `${normalized} :: ? : ?`;
 }
 
 function setTag(item) {
@@ -113,7 +141,6 @@ function renderChoices(item) {
     container.appendChild(div);
   });
 
-  // next enabled only if answered
   el("nextBtn").disabled = !selectedKeyFor(item);
 }
 
@@ -144,14 +171,11 @@ function renderItem() {
   const item = form[idx];
   setProgress();
   setTag(item);
-  el("stem").textContent = stemText(item);
+  el("stem").textContent = formatStemForDisplay(item);
   renderChoices(item);
   renderDev(item);
 
-  // time entry for rt
   itemEnterT = performance.now();
-
-  // back button state
   el("backBtn").disabled = (idx === 0);
 }
 
@@ -165,16 +189,14 @@ function onSelect(item, key) {
     ts: new Date().toISOString()
   });
 
-  // update ui quickly (so selection flash is visible)
+  // update ui quickly, then auto-advance
   renderChoices(item);
   renderDev(item);
 
-  // auto-advance (small delay so it doesn't feel like a teleport)
   setTimeout(() => next(), 80);
 }
 
 function next() {
-  // guard: require answer
   const item = form[idx];
   if (!responses.get(item.ITEM_ID)) return;
 
@@ -218,8 +240,6 @@ function buildAttemptPayload() {
   const rows = form.map((item, order) => {
     const rec = responses.get(item.ITEM_ID) || {};
     const chosen = rec.chosen ?? null;
-
-    // correct only meaningful for fixed scoring, but since you’re using private json locally:
     const isCorrect = chosen ? (chosen === item.ANSWER_KEY) : null;
 
     return {
@@ -233,9 +253,9 @@ function buildAttemptPayload() {
       item_type: item.ITEM_TYPE,
       p_plus: item.P_PLUS,
 
-      lang_presented: lang,         // crude, but useful for now
+      lang_presented: lang,
       chosen_key: chosen,
-      answer_key: item.ANSWER_KEY,  // DO NOT send this client-side in production
+      answer_key: item.ANSWER_KEY, // DO NOT do this in production
       correct: isCorrect,
       rt_ms: rec.rt_ms ?? null,
       ts: rec.ts ?? null
@@ -287,7 +307,7 @@ function start() {
   idx = 0;
   responses.clear();
 
-  form = buildForm(bankItems);
+  form = buildForm(bankItems, attemptId);
 
   el("startScreen").classList.add("hidden");
   el("endScreen").classList.add("hidden");
@@ -297,7 +317,6 @@ function start() {
 }
 
 function restart() {
-  // reset to start screen
   idx = 0;
   responses.clear();
   form = [];
@@ -312,8 +331,6 @@ function restart() {
 function toggleLang() {
   lang = (lang === "TR") ? "EN" : "TR";
   el("langBtn").textContent = `lang: ${lang.toLowerCase()}`;
-
-  // re-render current screen text
   if (!el("testScreen").classList.contains("hidden") && form.length) renderItem();
 }
 
@@ -329,7 +346,6 @@ function setupKeys() {
     if (e.key === "ArrowRight") next();
     if (e.key === "ArrowLeft") back();
 
-    // quick select A-E
     const k = e.key.toUpperCase();
     if (["A","B","C","D","E"].includes(k)) onSelect(form[idx], k);
   });
