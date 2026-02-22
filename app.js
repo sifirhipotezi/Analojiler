@@ -1,9 +1,8 @@
-/* minimal analogy prototype
+/* analogy localization review
    - loads ./data/analogies_items_private.json (meta + items)
-   - assembles 40 items: 32 fixed + 8 random rotation
-   - fully randomizes order
-   - auto-advances on selection
-   - scores fixed only
+   - all 48 items in fixed order (by ITEM_ID) so reviewers can resume
+   - no randomization; Next always enabled; no auto-advance on selection
+   - Finish anytime → download localization JSON and show end screen
 */
 
 const JSON_PATH = "./data/analogies_items_private.json";
@@ -21,6 +20,7 @@ let startedAt = null;
 
 let itemEnterT = 0;
 const responses = new Map(); // ITEM_ID -> { chosen, rt_ms, ts }
+const localizationEdits = new Map(); // ITEM_ID -> { stem_tr, A_tr, ..., note }
 
 const el = (id) => document.getElementById(id);
 
@@ -28,47 +28,9 @@ function uid() {
   return "att_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
 }
 
-// deterministic seeded rng for reproducible shuffles per attempt id
-function hashToSeed(str) {
-  let h = 2166136261;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-function mulberry32(a) {
-  return function() {
-    let t = (a += 0x6d2b79f5);
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function shuffleWithRng(arr, rng) {
-  const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-function buildForm(items, seedStr) {
-  const rng = mulberry32(hashToSeed(seedStr));
-
-  const fixed = items.filter(x => x.ITEM_TYPE === "FIXED");
-  const rotation = items.filter(x => x.ITEM_TYPE === "ROTATION");
-
-  const fixedShuf = shuffleWithRng(fixed, rng);
-  const rot8 = shuffleWithRng(rotation, rng).slice(0, 8);
-
-  const combined = fixedShuf.concat(rot8);
-
-  // fully randomize final 40
-  return shuffleWithRng(combined, rng);
+// fixed order: all items sorted by ITEM_ID so reviewers can resume from where they stopped
+function buildForm(items) {
+  return items.slice().sort((a, b) => (a.ITEM_ID || "").localeCompare(b.ITEM_ID || "", undefined, { numeric: true }));
 }
 
 function choiceText(item, key) {
@@ -79,6 +41,24 @@ function choiceText(item, key) {
 function stemText(item) {
   const k = `STEM_${lang}`;
   return item[k] ?? "";
+}
+
+function getLocalizationRecord(item) {
+  let rec = localizationEdits.get(item.ITEM_ID);
+  if (!rec) {
+    rec = {
+      item_id: item.ITEM_ID,
+      stem_tr: "",
+      A_tr: "",
+      B_tr: "",
+      C_tr: "",
+      D_tr: "",
+      E_tr: "",
+      note: ""
+    };
+    localizationEdits.set(item.ITEM_ID, rec);
+  }
+  return rec;
 }
 
 function formatStemForDisplay(item) {
@@ -114,6 +94,7 @@ function renderChoices(item) {
 
   const keys = ["A","B","C","D","E"];
   const selected = selectedKeyFor(item);
+  const locRec = getLocalizationRecord(item);
 
   keys.forEach((k) => {
     const div = document.createElement("div");
@@ -130,8 +111,20 @@ function renderChoices(item) {
     txt.className = "txt";
     txt.textContent = choiceText(item, k);
 
+    const input = document.createElement("input");
+    input.className = "loc-input";
+    input.type = "text";
+    input.placeholder = "TR önerisi (seçenek)";
+    const fieldKey = `${k}_tr`;
+    input.value = locRec[fieldKey] || "";
+    input.addEventListener("input", (e) => {
+      const r = getLocalizationRecord(item);
+      r[fieldKey] = e.target.value;
+    });
+
     div.appendChild(keySpan);
     div.appendChild(txt);
+    div.appendChild(input);
 
     div.addEventListener("click", () => onSelect(item, k));
     div.addEventListener("keydown", (e) => {
@@ -141,7 +134,7 @@ function renderChoices(item) {
     container.appendChild(div);
   });
 
-  el("nextBtn").disabled = !selectedKeyFor(item);
+  el("nextBtn").disabled = false;
 }
 
 function renderDev(item) {
@@ -172,11 +165,52 @@ function renderItem() {
   setProgress();
   setTag(item);
   el("stem").textContent = formatStemForDisplay(item);
+  renderStemEdit(item);
   renderChoices(item);
   renderDev(item);
+  renderNoteBox(item);
 
   itemEnterT = performance.now();
   el("backBtn").disabled = (idx === 0);
+}
+
+function renderStemEdit(item) {
+  const row = el("stemEditRow");
+  const locRec = getLocalizationRecord(item);
+  row.innerHTML = "";
+
+  const label = document.createElement("div");
+  label.className = "loc-label";
+  label.textContent = "TR uyarıcı önerisi:";
+
+  const input = document.createElement("input");
+  input.className = "loc-input";
+  input.type = "text";
+  input.placeholder = "STEM_TR için yeni formülasyon";
+  input.value = locRec.stem_tr || "";
+  input.addEventListener("input", (e) => {
+    const r = getLocalizationRecord(item);
+    r.stem_tr = e.target.value;
+  });
+
+  row.appendChild(label);
+  row.appendChild(input);
+}
+
+function renderNoteBox(item) {
+  const wrap = el("noteRow");
+  const locRec = getLocalizationRecord(item);
+  wrap.innerHTML = "";
+
+  const textarea = document.createElement("textarea");
+  textarea.placeholder = "Bu madde için notlar (anlam, frekans, kültürel yük, GPT/Gemini önerileri vb.)";
+  textarea.value = locRec.note || "";
+  textarea.addEventListener("input", (e) => {
+    const r = getLocalizationRecord(item);
+    r.note = e.target.value;
+  });
+
+  wrap.appendChild(textarea);
 }
 
 function onSelect(item, key) {
@@ -189,17 +223,11 @@ function onSelect(item, key) {
     ts: new Date().toISOString()
   });
 
-  // update ui quickly, then auto-advance
   renderChoices(item);
   renderDev(item);
-
-  setTimeout(() => next(), 80);
 }
 
 function next() {
-  const item = form[idx];
-  if (!responses.get(item.ITEM_ID)) return;
-
   if (idx < form.length - 1) {
     idx += 1;
     renderItem();
@@ -277,6 +305,56 @@ function buildAttemptPayload() {
   };
 }
 
+function buildLocalizationPayload() {
+  const rows = [];
+
+  for (const item of bankItems) {
+    const rec = localizationEdits.get(item.ITEM_ID);
+    if (!rec) continue;
+
+    const hasContent =
+      (rec.stem_tr && rec.stem_tr.trim()) ||
+      (rec.A_tr && rec.A_tr.trim()) ||
+      (rec.B_tr && rec.B_tr.trim()) ||
+      (rec.C_tr && rec.C_tr.trim()) ||
+      (rec.D_tr && rec.D_tr.trim()) ||
+      (rec.E_tr && rec.E_tr.trim()) ||
+      (rec.note && rec.note.trim());
+
+    if (!hasContent) continue;
+
+    rows.push({
+      item_id: item.ITEM_ID,
+      ITEM_TYPE: item.ITEM_TYPE,
+      P_PLUS: item.P_PLUS,
+      MAJORITY_TAG: item.MAJORITY_TAG,
+
+      STEM_TR_original: item.STEM_TR,
+      STEM_TR_suggestion: rec.stem_tr || null,
+
+      A_TR_original: item.A_TR,
+      A_TR_suggestion: rec.A_tr || null,
+      B_TR_original: item.B_TR,
+      B_TR_suggestion: rec.B_tr || null,
+      C_TR_original: item.C_TR,
+      C_TR_suggestion: rec.C_tr || null,
+      D_TR_original: item.D_TR,
+      D_TR_suggestion: rec.D_tr || null,
+      E_TR_original: item.E_TR,
+      E_TR_suggestion: rec.E_tr || null,
+
+      note: rec.note || null
+    });
+  }
+
+  return {
+    bank_version: bankMeta?.bank_version ?? null,
+    generated_at: new Date().toISOString(),
+    count_items_with_edits: rows.length,
+    edits: rows
+  };
+}
+
 function downloadJson(obj, filename) {
   const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -297,6 +375,25 @@ function finish() {
   el("fixedTotal").textContent = String(s.fixedTotal);
   el("rotAnswered").textContent = String(s.rotAnswered);
 
+  el("endMessage").textContent = "";
+  el("endMessage").classList.add("hidden");
+
+  el("testScreen").classList.add("hidden");
+  el("endScreen").classList.remove("hidden");
+}
+
+function finishReview() {
+  const payload = buildLocalizationPayload();
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, "");
+  downloadJson(payload, `analogies_localization_${stamp}.json`);
+
+  el("endMessage").textContent = "Localization JSON downloaded. Restart to continue reviewing from the start.";
+  el("endMessage").classList.remove("hidden");
+  el("rawScore").textContent = "-";
+  el("fixedCorrect").textContent = "-";
+  el("fixedTotal").textContent = String(form.length);
+  el("rotAnswered").textContent = "-";
+
   el("testScreen").classList.add("hidden");
   el("endScreen").classList.remove("hidden");
 }
@@ -307,7 +404,7 @@ function start() {
   idx = 0;
   responses.clear();
 
-  form = buildForm(bankItems, attemptId);
+  form = buildForm(bankItems);
 
   el("startScreen").classList.add("hidden");
   el("endScreen").classList.add("hidden");
@@ -365,11 +462,9 @@ async function loadBank() {
   el("bankInfo").textContent =
     `items: ${bankItems.length} • bank_version: ${bankMeta?.bank_version ?? "unknown"}`;
 
-  const fixedN = bankItems.filter(x => x.ITEM_TYPE === "FIXED").length;
-  const rotN = bankItems.filter(x => x.ITEM_TYPE === "ROTATION").length;
-  el("countsPill").textContent = `fixed: ${fixedN} • rotation pool: ${rotN}`;
+  el("countsPill").textContent = `items: ${bankItems.length}`;
 
-  return { fixedN, rotN };
+  return { bankItems: bankItems.length };
 }
 
 function wireUi() {
@@ -380,10 +475,17 @@ function wireUi() {
 
   el("nextBtn").addEventListener("click", next);
   el("backBtn").addEventListener("click", back);
+  el("finishBtn").addEventListener("click", finishReview);
 
   el("downloadBtn").addEventListener("click", () => {
     const payload = buildAttemptPayload();
     downloadJson(payload, `${attemptId}.json`);
+  });
+
+  el("locDownloadBtn").addEventListener("click", () => {
+    const payload = buildLocalizationPayload();
+    const ver = bankMeta?.bank_version ?? "unknown";
+    downloadJson(payload, `analogies_localization_${ver}.json`);
   });
 
   el("reviewBtn").addEventListener("click", () => {

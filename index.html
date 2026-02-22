@@ -15,6 +15,7 @@
       </div>
 
       <div class="controls">
+        <button id="locDownloadBtn" class="btn btn-ghost" type="button" title="download localization edits">loc json</button>
         <button id="langBtn" class="btn btn-ghost" type="button" title="toggle language">lang: tr</button>
         <button id="devBtn" class="btn btn-ghost" type="button" title="toggle dev info">dev: off</button>
         <button id="restartBtn" class="btn btn-ghost" type="button" title="restart">restart</button>
@@ -23,16 +24,16 @@
 
     <main class="card">
       <section id="startScreen">
-        <h1>prototype run</h1>
+        <h1>localization review</h1>
         <p class="muted">
-          this will assemble 40 items (32 fixed + 8 rotation). rotation items are administered but not scored.
+          all 48 items in fixed order (by item ID). you can skip any item, finish whenever you want, and download your TR suggestions as JSON. next time, open the app and use Back/Next to continue from where you stopped.
         </p>
 
         <div class="pillrow">
-          <span class="pill" id="countsPill">fixed: ? • rotation pool: ?</span>
-          <span class="pill">scored: fixed only</span>
-          <span class="pill">order: randomized</span>
-          <span class="pill">advance: auto</span>
+          <span class="pill" id="countsPill">items: ?</span>
+          <span class="pill">order: fixed (AN0001 → AN0048)</span>
+          <span class="pill">skip: any item</span>
+          <span class="pill">finish: anytime → download JSON</span>
         </div>
 <div class="instr">
   <div class="lang-block lang-en">
@@ -119,25 +120,31 @@
         <div class="progress">
           <div class="bar"><div id="barFill" class="fill"></div></div>
           <div class="meta">
-            <span id="progressText">item 1 / 40</span>
+            <span id="progressText">item 1 / 48</span>
             <span id="typeTag" class="tag">fixed</span>
           </div>
         </div>
 
         <div class="stem" id="stem"></div>
 
+        <div id="stemEditRow" class="loc-row"></div>
+
         <div class="choices" id="choices"></div>
 
         <div id="devInfo" class="dev hidden"></div>
 
+        <div id="noteRow" class="loc-note"></div>
+
         <div class="nav">
           <button id="backBtn" class="btn" type="button">back</button>
-          <button id="nextBtn" class="btn btn-primary" type="button" disabled>next</button>
+          <button id="finishBtn" class="btn" type="button" title="Finish and download localization JSON">finish</button>
+          <button id="nextBtn" class="btn btn-primary" type="button">next</button>
         </div>
       </section>
 
       <section id="endScreen" class="hidden">
         <h1>done</h1>
+        <p id="endMessage" class="muted hidden"></p>
         <div class="scorebox">
           <div class="scoreline">
             <span class="label">raw (fixed only)</span>

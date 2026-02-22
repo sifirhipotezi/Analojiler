@@ -244,3 +244,55 @@ p{ margin: 0 0 14px; line-height: 1.5; }
 
 html[data-lang="tr"] .lang-en { display: none; }
 html[data-lang="en"] .lang-tr { display: none; }
+
+.loc-row{
+  margin: 8px 0 4px;
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+  font-size: 11px;
+  color: var(--muted);
+}
+.loc-label{
+  font-size: 11px;
+  color: var(--muted);
+  white-space:nowrap;
+}
+.loc-input{
+  flex: 1 1 220px;
+  min-width: 0;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(0,0,0,.3);
+  color: var(--text);
+  font-size: 12px;
+  padding: 6px 8px;
+  outline:none;
+}
+.loc-input::placeholder{
+  color: rgba(138,144,162,.9);
+}
+.loc-note{
+  margin-top: 10px;
+  border-radius: 10px;
+  border: 1px dashed rgba(255,255,255,.12);
+  background: rgba(0,0,0,.16);
+  padding: 8px;
+}
+.loc-note textarea{
+  width: 100%;
+  min-height: 60px;
+  resize: vertical;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(0,0,0,.3);
+  color: var(--text);
+  font-size: 12px;
+  padding: 6px 8px;
+  font-family: var(--sans);
+  outline:none;
+}
+.choice .loc-input{
+  margin-top: 6px;
+}
