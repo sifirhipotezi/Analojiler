@@ -112,10 +112,12 @@ p{ margin: 0 0 14px; line-height: 1.5; }
   margin-top: 8px;
   display:flex;
   align-items:center;
-  justify-content:space-between;
+  justify-content:flex-start;
+  gap: 8px;
   font-size: 12px;
   color: var(--muted);
 }
+#progressText{ margin-right: auto; }
 
 .tag{
   border: 1px solid var(--line);
@@ -126,6 +128,12 @@ p{ margin: 0 0 14px; line-height: 1.5; }
 }
 .tag.fixed{ border-color: rgba(91,140,255,.45); color: rgba(91,140,255,.95); }
 .tag.rotation{ border-color: rgba(124,240,197,.35); color: rgba(124,240,197,.95); }
+.tag.easy{ border-color: rgba(124,240,197,.5); color: rgba(124,240,197,.95); }
+.tag.easy-medium{ border-color: rgba(146,223,186,.45); color: rgba(146,223,186,.95); }
+.tag.medium{ border-color: rgba(255,221,122,.45); color: rgba(255,221,122,.95); }
+.tag.medium-hard{ border-color: rgba(255,166,102,.5); color: rgba(255,166,102,.95); }
+.tag.hard{ border-color: rgba(255,112,112,.52); color: rgba(255,112,112,.95); }
+.tag.unknown{ border-color: rgba(255,255,255,.18); color: var(--muted); }
 
 .stem{
   font-size: 18px;

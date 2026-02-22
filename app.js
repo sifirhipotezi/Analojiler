@@ -68,13 +68,30 @@ function formatStemForDisplay(item) {
   return `${normalized} :: ? : ?`;
 }
 
+function difficultyBucket(pPlusRaw) {
+  const p = Number(pPlusRaw);
+  if (!Number.isFinite(p)) return { key: "unknown", label: "unknown", value: null };
+  if (p >= 80) return { key: "easy", label: "easy", value: p };
+  if (p >= 60) return { key: "easy-medium", label: "easy-medium", value: p };
+  if (p >= 40) return { key: "medium", label: "medium", value: p };
+  if (p >= 20) return { key: "medium-hard", label: "medium-hard", value: p };
+  if (p >= 0) return { key: "hard", label: "hard", value: p };
+  return { key: "unknown", label: "unknown", value: p };
+}
+
 function setTag(item) {
-  const tag = el("typeTag");
+  const typeTag = el("typeTag");
   const t = (item.ITEM_TYPE || "").toLowerCase();
-  tag.textContent = t || "unknown";
-  tag.classList.remove("fixed", "rotation");
-  if (t === "fixed") tag.classList.add("fixed");
-  if (t === "rotation") tag.classList.add("rotation");
+  typeTag.textContent = t || "unknown";
+  typeTag.classList.remove("fixed", "rotation");
+  if (t === "fixed") typeTag.classList.add("fixed");
+  if (t === "rotation") typeTag.classList.add("rotation");
+
+  const diffTag = el("difficultyTag");
+  const diff = difficultyBucket(item.P_PLUS);
+  diffTag.textContent = diff.value == null ? "difficulty: unknown" : `difficulty: ${diff.label} (p+: ${diff.value})`;
+  diffTag.classList.remove("easy", "easy-medium", "medium", "medium-hard", "hard", "unknown");
+  diffTag.classList.add(diff.key);
 }
 
 function setProgress() {
