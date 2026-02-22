@@ -88,6 +88,11 @@ function selectedKeyFor(item) {
   return rec ? rec.chosen : null;
 }
 
+function isTextEntryTarget(target) {
+  if (!(target instanceof Element)) return false;
+  return !!target.closest("input, textarea, [contenteditable='true']");
+}
+
 function renderChoices(item) {
   const container = el("choices");
   container.innerHTML = "";
@@ -99,9 +104,16 @@ function renderChoices(item) {
   keys.forEach((k) => {
     const div = document.createElement("div");
     div.className = "choice" + (selected === k ? " selected" : "");
-    div.tabIndex = 0;
-    div.setAttribute("role", "button");
     div.dataset.key = k;
+
+    const selectArea = document.createElement("div");
+    selectArea.className = "choice-select";
+    selectArea.tabIndex = 0;
+    selectArea.setAttribute("role", "button");
+    selectArea.style.display = "flex";
+    selectArea.style.gap = "10px";
+    selectArea.style.alignItems = "flex-start";
+    selectArea.style.flex = "1 1 auto";
 
     const keySpan = document.createElement("div");
     keySpan.className = "key";
@@ -121,14 +133,21 @@ function renderChoices(item) {
       const r = getLocalizationRecord(item);
       r[fieldKey] = e.target.value;
     });
+    input.addEventListener("click", (e) => e.stopPropagation());
+    input.addEventListener("keydown", (e) => e.stopPropagation());
 
-    div.appendChild(keySpan);
-    div.appendChild(txt);
+    selectArea.appendChild(keySpan);
+    selectArea.appendChild(txt);
+    div.appendChild(selectArea);
     div.appendChild(input);
 
-    div.addEventListener("click", () => onSelect(item, k));
-    div.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") onSelect(item, k);
+    selectArea.addEventListener("click", () => onSelect(item, k));
+    selectArea.addEventListener("keydown", (e) => {
+      if (isTextEntryTarget(e.target)) return;
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        onSelect(item, k);
+      }
     });
 
     container.appendChild(div);
@@ -446,7 +465,7 @@ function setupKeys() {
   document.addEventListener("keydown", (e) => {
     if (el("testScreen").classList.contains("hidden")) return;
     const active = document.activeElement;
-    const inInput = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA");
+    const inInput = isTextEntryTarget(active);
     if (inInput) return;
 
     if (e.key === "ArrowRight") next();
@@ -455,7 +474,7 @@ function setupKeys() {
       e.preventDefault();
       next();
     }
-    // A–E shortcuts disabled so translators can type in localization boxes without selecting options
+    // A-E shortcuts intentionally disabled to protect text entry.
   });
 }
 
