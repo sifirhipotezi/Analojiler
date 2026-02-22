@@ -328,6 +328,9 @@ function restart() {
   el("reviewBox").classList.add("hidden");
 }
 
+function applyLangToDom() {
+  document.documentElement.dataset.lang = lang.toLowerCase();
+}
 function toggleLang() {
   lang = (lang === "TR") ? "EN" : "TR";
   el("langBtn").textContent = `lang: ${lang.toLowerCase()}`;
@@ -394,7 +397,7 @@ function wireUi() {
 (async function main(){
   wireUi();
   setupKeys();
-
+  applyLangToDom();
   try {
     await loadBank();
   } catch (err) {
