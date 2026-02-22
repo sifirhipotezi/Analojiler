@@ -165,9 +165,12 @@ function onSelect(item, key) {
     ts: new Date().toISOString()
   });
 
-  // re-render choices for selection highlight + enable next
+  // update ui quickly (so selection flash is visible)
   renderChoices(item);
   renderDev(item);
+
+  // auto-advance (small delay so it doesn't feel like a teleport)
+  setTimeout(() => next(), 80);
 }
 
 function next() {
