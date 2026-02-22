@@ -445,7 +445,6 @@ function toggleDev() {
 function setupKeys() {
   document.addEventListener("keydown", (e) => {
     if (el("testScreen").classList.contains("hidden")) return;
-    // don't steal keys when typing in localization inputs or notes
     const active = document.activeElement;
     const inInput = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA");
     if (inInput) return;
@@ -455,11 +454,8 @@ function setupKeys() {
     if (e.key === " ") {
       e.preventDefault();
       next();
-      return;
     }
-
-    const k = e.key.toUpperCase();
-    if (["A","B","C","D","E"].includes(k)) onSelect(form[idx], k);
+    // A–E shortcuts disabled so translators can type in localization boxes without selecting options
   });
 }
 
